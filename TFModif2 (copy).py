@@ -214,10 +214,10 @@ def get_leg_loss(out,target):
     error = 0.
     for _ in range(out.shape[0]):
         
-        right_femur_out_actual = out[_][15:18]
-        right_shin_out_actual = out[_][18:21]
-        right_femur_target = target[_][15:18]
-        right_shin_target = target[_][18:21]
+        right_femur_out_actual = out[_][15:18] * 10
+        right_shin_out_actual = out[_][18:21] * 10
+        right_femur_target = target[_][15:18] * 10
+        right_shin_target = target[_][18:21] * 10
         
         # with torch.no_grad():
         #     non_diff_right_femur_out = torch.round(right_femur_out_actual,decimals=2).to(device)
@@ -236,24 +236,19 @@ def get_leg_loss(out,target):
         mag_right_shin = torch.linalg.norm(right_shin_out)
         
         angle_val = (torch.dot(right_femur_out,right_shin_out))/(mag_right_femur*mag_right_shin)
-
-        # Keep numeric stability
-        angle_val = torch.clip(angle_val,min=-1,max=1) #cos will always be in -1 and +1 even if network does errors
-
         out_right_angle = 2
-        out_right_angle = torch.acos(angle_val)
+        if angle_val<=1 and angle_val>=-1:
+            out_right_angle = torch.acos(angle_val)
             
         mag_right_femur = torch.linalg.norm(right_femur_target)
         mag_right_shin = torch.linalg.norm(right_shin_target)
 
-        target_angle_val = (torch.dot(right_femur_target,right_shin_target))/(mag_right_femur*mag_right_shin)
-        target_angle_val = torch.clip(target_angle_val,min=-1,max=1)
-        target_right_angle = torch.acos(target_angle_val)
+        target_right_angle = torch.acos((torch.dot(right_femur_target,right_shin_target))/(mag_right_femur*mag_right_shin))
             
-        left_femur_out_actual = out[_][21:24]
-        left_shin_out_actual = out[_][24:27]
-        left_femur_target = target[_][21:24]
-        left_shin_target = target[_][24:27]
+        left_femur_out_actual = out[_][21:24] * 10
+        left_shin_out_actual = out[_][24:27] * 10
+        left_femur_target = target[_][21:24] * 10
+        left_shin_target = target[_][24:27] * 10
         
         # with torch.no_grad():
         #     non_diff_left_femur_out = torch.round(left_femur_out_actual,decimals=2).to(device)
@@ -272,19 +267,14 @@ def get_leg_loss(out,target):
         mag_left_shin = torch.linalg.norm(left_shin_out)
         
         angle_val = (torch.dot(left_femur_out,left_shin_out))/(mag_left_femur*mag_left_shin)
-
-        # Keep numeric stability
-        angle_val = torch.clip(angle_val,min=-1,max=1) #cos will always be in -1 and +1 even if network does errors
-
         out_left_angle = 2
-        out_left_angle = torch.acos(angle_val)
+        if angle_val<=1 and angle_val>=-1:
+            out_left_angle = torch.acos(angle_val)
 
         mag_left_femur = torch.linalg.norm(left_femur_target)
         mag_left_shin = torch.linalg.norm(left_shin_target)
         
-        target_angle_val = (torch.dot(left_femur_target,left_shin_target))/(mag_left_femur*mag_left_shin)
-        target_angle_val = torch.clip(target_angle_val,min=-1,max=1)
-        target_left_angle = torch.acos(target_angle_val)
+        target_left_angle = torch.acos((torch.dot(left_femur_target,left_shin_target))/(mag_left_femur*mag_left_shin))
 
         if type(out_left_angle) is int or type(out_right_angle) is int:
             print("Invalid loss here")
@@ -299,10 +289,10 @@ def get_leg_loss(out,target):
             out_left_angle = prev_out_left_anlge
             out_right_angle = prev_out_right_angle
         #Smooth L1
-        output_vals_mat = torch.hstack((out_right_angle,out_left_angle))
+        output_vals_mat = torch.hstack((out_right_angle,out_left_angle))/100
 
         # target_vals_mat = torch.from_numpy(np.array([target_right_angle,target_left_angle])/100).to(device='cuda')
-        target_vals_mat = torch.hstack((target_right_angle,target_left_angle))
+        target_vals_mat = torch.hstack((target_right_angle,target_left_angle))/100
         error+= 0.3 * loss_func(output_vals_mat,target_vals_mat)
         
         #ALSO DO SOME KIND OF ANGULAR VELOCITY LOSS
@@ -328,8 +318,8 @@ def get_leg_loss(out,target):
             # output_vals_mat = torch.from_numpy(np.array([delta_out_left,delta_out_right])/100).to(device='cuda')
             # target_vals_mat = torch.from_numpy(np.array([delta_target_left,delta_target_right])/100).to(device='cuda')
 
-            output_vals_mat = torch.hstack((delta_out_left,delta_out_right))
-            target_vals_mat = torch.hstack((delta_target_left,delta_target_right))
+            output_vals_mat = torch.hstack((delta_out_left,delta_out_right))/100
+            target_vals_mat = torch.hstack((delta_target_left,delta_target_right))/100
             
             error+= 0.7 * loss_func(output_vals_mat,target_vals_mat)
         
@@ -403,7 +393,7 @@ def forward_pass_s2ag(in_mfcc, in_chroma, label_in, pre_seq, target_poses, s2ag_
 
 
 
-    dis_fake = s2ag_discriminator(out_dir_vec.detach(), label_in) # 1 is real and 0 is fake
+    dis_fake = s2ag_discriminator(out_dir_vec.detach(), label_in)
 
 
 
@@ -445,6 +435,9 @@ def forward_pass_s2ag(in_mfcc, in_chroma, label_in, pre_seq, target_poses, s2ag_
         loss += loss_gan_weight * gen_error
 
         loss.backward()
+
+        torch.nn.utils.clip_grad_norm_(s2ag_generator.parameters(), max_norm = 1)
+
         s2ag_gen_optimizer.step()
 
     return F.l1_loss(out_dir_vec, target_poses).item(), dis_error.item(), loss.item() 
@@ -520,7 +513,8 @@ s2ag_discriminator = AffDiscriminator(2,100, 16).to(device=device)
 # In[8]:
 
 
-
+# s2ag_generator.load_state_dict(torch.load('./BN_RN_TFModif/M2AD_Gen11_ep20_10FPS'))
+# s2ag_discriminator.load_state_dict(torch.load('./BN_RN_TFModif/M2AD_Disc11_ep20_10FPS'))
 
 
 # In[9]:
@@ -581,15 +575,10 @@ def train(s2ag_generator,s2ag_discriminator):
 
         # save model and weights
         
-        if epoch%1 == 0:
+        if epoch%10 == 0:
             torch.save(s2ag_generator.state_dict(), './BN_RN_TFModif/M2AD_Gen11_ep'+str(epoch)+'_10FPS')
             torch.save(s2ag_discriminator.state_dict(), './BN_RN_TFModif/M2AD_Disc11_ep'+str(epoch)+'_10FPS')
 
-
-# torch.autograd.set_detect_anomaly(True)
-
-# s2ag_generator.load_state_dict(torch.load('./BN_RN_TFModif/M2AD_Gen11_ep6_10FPS'))
-# s2ag_discriminator.load_state_dict(torch.load('./BN_RN_TFModif/M2AD_Disc11_ep6_10FPS'))
 
 print("Training started...")
 train(s2ag_generator,s2ag_discriminator)
