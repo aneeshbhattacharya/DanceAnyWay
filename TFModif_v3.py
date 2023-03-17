@@ -21,10 +21,13 @@ from Model_Components.m2ad_pose_repletion_net import PoseSeq2SeqGenerator, AffDi
 from speech2affective_gestures.net.utils.graph import Graph
 from speech2affective_gestures.net.utils.tgcn import STGraphConv, STGraphConvTranspose
 
-RIGHT_FEMUR = 5
-RIGHT_SHIN = 6
-LEFT_FEMUR = 7
-LEFT_SHIN = 8
+RIGHT_FEMUR_BONE_IDX = 5
+RIGHT_SHIN_BONE_IDX = 6
+LEFT_FEMUR_BONE_IDX = 7
+LEFT_SHIN_BONE_IDX = 8
+
+RIGHT_FOOT_JOINT_IDX = 15
+LEFT_FOOT_JOINT_IDX = 7
 
 
 # In[1]:
@@ -287,37 +290,102 @@ class CustomGANDataset(Dataset):
 
 
 # In[3]:
+
+class ReconstructSkeleton():
+
+    def __init__(self, device):
+        
+        self.dir_vec_pairs = [
+            (0, 1, 10), (0, 2, 14), (0, 8, 14), (0, 5, 30), (0, 11, 30),
+            (5, 6, 20), (6, 7, 20), (11, 12, 20), (12, 13, 20),
+            (2, 3, 16), (3, 4, 14), (8, 9, 16), (9, 10, 14),
+            (1, 14, 4), (14, 16, 4), (1, 15, 4), (15, 17, 4)
+        ]
+
+        self.dir_edge_pairs = [
+            (0, 1), (0, 2), (0, 3), (0, 4), (0, 13), (0, 15),
+            (3, 5), (5, 6), (4, 7), (7, 8), (1, 9), (9, 10),
+            (2, 11), (11, 12), (13, 14), (15, 16)
+        ]
+
+        self.body_parts_edge_idx = [
+
+            [13, 14, 15, 16],  #head
+            [0, 3, 4],  #torso
+            [1, 9, 10],  #left arm
+            [2, 11, 12],  #right arm
+            [5, 6],  #left leg
+            [7, 8]  #right leg
+        ]
+
+        self.max_body_part_edges = 4
+        self.body_parts_edge_pairs = [
+            (1, 0), (1, 2), (1, 3), 
+            (1, 4), (1, 5)
+        ]
+
+        self.device = device
+
+    def convert_dir_vec_to_pose(self, vec):
+        # vec = np.array(vec)
+
+        if vec.shape[-1] != 3:
+            vec = vec.view(vec.shape[:-1] + (-1, 3))
+
+        if len(vec.shape) == 2:
+            joint_pos = torch.zeros((18, 3)).to(self.device)
+            for j, pair in enumerate(self.dir_vec_pairs):
+                joint_pos[pair[1]] = joint_pos[pair[0]] + pair[2] * vec[j]
+
+        elif len(vec.shape) == 3:
+            joint_pos = torch.zeros((vec.shape[0], 18, 3)).to(self.device)
+            for j, pair in enumerate(self.dir_vec_pairs):
+                joint_pos[:, pair[1]] = joint_pos[:, pair[0]] + pair[2] * vec[:, j]
+        elif len(vec.shape) == 4:  # (batch, seq, 9, 3)
+            joint_pos = torch.zeros((vec.shape[0], vec.shape[1], 18, 3)).to(self.device)
+            for j, pair in enumerate(self.dir_vec_pairs):
+                joint_pos[:, :, pair[1]] = joint_pos[:, :, pair[0]] + pair[2] * vec[:, :, j]
+        else:
+            assert False
+
+        return joint_pos
+
+    def get_joints(self, output_vecs):
+        joints = self.convert_dir_vec_to_pose(output_vecs)
+        return joints
+
+
 def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7):
     loss_func = nn.SmoothL1Loss(size_average=None, reduce=None, reduction='mean', beta=5.0)
 
-    out_right_femur = out[..., RIGHT_FEMUR * 3:(RIGHT_FEMUR + 1) * 3]
-    out_right_shin = out[..., RIGHT_SHIN * 3:(RIGHT_SHIN + 1) * 3]
+    out_right_femur = out[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3]
+    out_right_shin = out[..., RIGHT_SHIN_BONE_IDX * 3:(RIGHT_SHIN_BONE_IDX + 1) * 3]
     out_right_femur_mag = torch.linalg.norm(out_right_femur, dim=-1)
     out_right_shin_mag = torch.linalg.norm(out_right_shin, dim=-1)
-    target_right_femur = target[..., RIGHT_FEMUR * 3:(RIGHT_FEMUR + 1) * 3]
-    target_right_shin = target[..., RIGHT_SHIN * 3:(RIGHT_SHIN + 1) * 3]
+    target_right_femur = target[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3]
+    target_right_shin = target[..., RIGHT_SHIN_BONE_IDX * 3:(RIGHT_SHIN_BONE_IDX + 1) * 3]
     target_right_femur_mag = torch.linalg.norm(target_right_femur, dim=-1)
     target_right_shin_mag = torch.linalg.norm(target_right_shin, dim=-1)
 
     cosine_dist_out_rleg = 1. - torch.einsum('btj, btj -> bt', out_right_femur, out_right_shin) / (out_right_femur_mag * out_right_shin_mag)
     cosine_dist_target_rleg =\
-        1. - torch.einsum('btj, btj -> bt', target[..., RIGHT_FEMUR * 3:(RIGHT_FEMUR + 1) * 3], target[..., RIGHT_SHIN * 3:(RIGHT_SHIN + 1) * 3]) / (target_right_femur_mag * target_right_shin_mag)
+        1. - torch.einsum('btj, btj -> bt', target[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3], target[..., RIGHT_SHIN_BONE_IDX * 3:(RIGHT_SHIN_BONE_IDX + 1) * 3]) / (target_right_femur_mag * target_right_shin_mag)
     cosine_dist_loss_rleg = dist_coeff * loss_func(cosine_dist_out_rleg, cosine_dist_target_rleg)
     cosine_vel_loss_rleg = vel_coeff * loss_func(cosine_dist_out_rleg[:, 1:] - cosine_dist_out_rleg[:, :-1],
                                                  cosine_dist_target_rleg[:, 1:] - cosine_dist_target_rleg[:, :-1])
 
-    out_left_femur = out[..., LEFT_FEMUR * 3:(LEFT_FEMUR + 1) * 3]
-    out_left_shin = out[..., LEFT_SHIN * 3:(LEFT_SHIN + 1) * 3]
+    out_left_femur = out[..., LEFT_FEMUR_BONE_IDX * 3:(LEFT_FEMUR_BONE_IDX + 1) * 3]
+    out_left_shin = out[..., LEFT_SHIN_BONE_IDX * 3:(LEFT_SHIN_BONE_IDX + 1) * 3]
     out_left_femur_mag = torch.linalg.norm(out_left_femur, dim=-1)
     out_left_shin_mag = torch.linalg.norm(out_left_shin, dim=-1)
-    target_left_femur = target[..., LEFT_FEMUR * 3:(LEFT_FEMUR + 1) * 3]
-    target_left_shin = target[..., LEFT_SHIN * 3:(LEFT_SHIN + 1) * 3]
+    target_left_femur = target[..., LEFT_FEMUR_BONE_IDX * 3:(LEFT_FEMUR_BONE_IDX + 1) * 3]
+    target_left_shin = target[..., LEFT_SHIN_BONE_IDX * 3:(LEFT_SHIN_BONE_IDX + 1) * 3]
     target_left_femur_mag = torch.linalg.norm(target_left_femur, dim=-1)
     target_left_shin_mag = torch.linalg.norm(target_left_shin, dim=-1)
 
     cosine_dist_out_lleg = 1. - torch.einsum('btj, btj -> bt', out_left_femur, out_left_shin) / (out_left_femur_mag * out_left_shin_mag)
     cosine_dist_target_lleg =\
-        1. - torch.einsum('btj, btj -> bt', target[..., LEFT_FEMUR * 3:(LEFT_FEMUR + 1) * 3], target[..., LEFT_SHIN * 3:(LEFT_SHIN + 1) * 3]) / (target_left_femur_mag * target_left_shin_mag)
+        1. - torch.einsum('btj, btj -> bt', target[..., LEFT_FEMUR_BONE_IDX * 3:(LEFT_FEMUR_BONE_IDX + 1) * 3], target[..., LEFT_SHIN_BONE_IDX * 3:(LEFT_SHIN_BONE_IDX + 1) * 3]) / (target_left_femur_mag * target_left_shin_mag)
     cosine_dist_loss_lleg = dist_coeff * loss_func(cosine_dist_out_lleg, cosine_dist_target_lleg)
     cosine_vel_loss_lleg = vel_coeff * loss_func(cosine_dist_out_lleg[:, 1:] - cosine_dist_out_lleg[:, :-1],
                                                  cosine_dist_target_lleg[:, 1:] - cosine_dist_target_lleg[:, :-1])
@@ -326,31 +394,31 @@ def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7):
 
 
 # In[4]:
-def get_ftct_loss(out, target):
-    lf_speeds = torch.norm(target[:, 1:, 4] - target[:, :-1, 4], dim=-1)
-    rf_speeds = torch.norm(target[:, 1:, 9] - target[:, :-1, 9], dim=-1)
-    lt_speeds = torch.norm(target[:, 1:, 5] - target[:, :-1, 5], dim=-1)
-    rt_speeds = torch.norm(target[:, 1:, 10] - target[:, :-1, 10], dim=-1)
-    lf_speeds_pred = torch.norm(out[:, 1:, 4] - out[:, :-1, 4], dim=-1)[0]
-    rf_speeds_pred = torch.norm(out[:, 1:, 9] - out[:, :-1, 9], dim=-1)[0]
-    lt_speeds_pred = torch.norm(out[:, 1:, 5] - out[:, :-1, 5], dim=-1)[0]
-    rt_speeds_pred = torch.norm(out[:, 1:, 10] - out[:, :-1, 10], dim=-1)[0]
-    return torch.mean(torch.abs(lf_speeds - lf_speeds_pred)) + torch.mean(torch.abs(rf_speeds - rf_speeds_pred)) +\
-        torch.mean(torch.abs(lt_speeds - lt_speeds_pred)) + torch.mean(torch.abs(rt_speeds - rt_speeds_pred))
+def get_ftct_loss(out, target, fk_routine):
+    out_poses = fk_routine.get_joints(out)
+    target_poses = fk_routine.get_joints(target)
+
+    out_lf_speeds = torch.norm(out_poses[:, 1:, LEFT_FOOT_JOINT_IDX] - out_poses[:, :-1, LEFT_FOOT_JOINT_IDX], dim=-1)[0]
+    out_rf_speeds = torch.norm(out_poses[:, 1:, RIGHT_FOOT_JOINT_IDX] - out_poses[:, :-1, RIGHT_FOOT_JOINT_IDX], dim=-1)[0]
+
+    target_lf_speeds = torch.norm(target_poses[:, 1:, LEFT_FOOT_JOINT_IDX] - target_poses[:, :-1, LEFT_FOOT_JOINT_IDX], dim=-1)
+    target_rf_speeds = torch.norm(target_poses[:, 1:, RIGHT_FOOT_JOINT_IDX] - target_poses[:, :-1, RIGHT_FOOT_JOINT_IDX], dim=-1)
+
+    return torch.mean(torch.abs(target_lf_speeds - out_lf_speeds)) + torch.mean(torch.abs(target_rf_speeds - out_rf_speeds))
 
 
 # In[5]:
-def get_velocity_loss(outputs, targets, loss_function, leg_loss_coeff=0.3, ftct_loss_coeff=1.5): #will be defined as movement of poses from time1-time0, time2-time1, time3-time2 etc.
-
+def get_velocity_loss(outputs, targets, fk_routine, leg_loss_coeff=0.3, ftct_loss_coeff=1.5): #will be defined as movement of poses from time1-time0, time2-time1, time3-time2 etc.
+    loss_func = nn.SmoothL1Loss()
     batch_size, time_steps, pose_dim = outputs.shape
 
     total_loss = 0.
 
     # total_loss = position loss + velocity loss + leg loss + foot contact loss
-    total_loss = loss_function(outputs, targets) +\
-                    loss_function(outputs[:, 1:] - outputs[:, :-1], targets[:, 1:] - targets[:, :-1]) +\
+    total_loss = loss_func(outputs, targets) +\
+                    loss_func(outputs[:, 1:] - outputs[:, :-1], targets[:, 1:] - targets[:, :-1]) +\
                     leg_loss_coeff * get_leg_loss(outputs, targets) +\
-                    ftct_loss_coeff * get_ftct_loss(outputs, targets)
+                    ftct_loss_coeff * get_ftct_loss(outputs, targets, fk_routine)
 
     # for item in range(batch_size):
     #     out = outputs[item]
@@ -365,8 +433,8 @@ def get_velocity_loss(outputs, targets, loss_function, leg_loss_coeff=0.3, ftct_
     #     out_1d = non_zero_out[2:] - non_zero_out[1:-1]
     #     target_1d = non_zero_target[2:] - non_zero_target[1:-1]
 
-    #     v_loss = loss_function(out_1d, target_1d)
-    #     p_loss = loss_function(non_zero_out, non_zero_target)
+    #     v_loss = loss_func(out_1d, target_1d)
+    #     p_loss = loss_func(non_zero_out, non_zero_target)
 
     #     total_loss += v_loss
     #     total_loss += p_loss
@@ -376,7 +444,7 @@ def get_velocity_loss(outputs, targets, loss_function, leg_loss_coeff=0.3, ftct_
 
 
 # In[6]:
-def forward_pass_s2ag(in_mfcc, in_chroma, label_in, pre_seq, target_poses, s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, tf_ratio):
+def forward_pass_s2ag(in_mfcc, in_chroma, label_in, pre_seq, target_poses, s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, fk_routine, tf_ratio):
 
     # make pre seq input
     # pre_seq = target_poses.new_zeros((target_poses.shape[0], target_poses.shape[1],
@@ -426,8 +494,7 @@ def forward_pass_s2ag(in_mfcc, in_chroma, label_in, pre_seq, target_poses, s2ag_
         # huber_loss = F.smooth_l1_loss(out_dir_vec / beta, target_poses / beta) * beta
         
         #Define huber loss as the velocity loss thing
-        loss_function = nn.SmoothL1Loss()
-        huber_loss = get_velocity_loss(out_dir_vec, target_poses, loss_function)
+        huber_loss = get_velocity_loss(out_dir_vec, target_poses, fk_routine)
 
 
         dis_output = s2ag_discriminator(out_dir_vec, label_in)
@@ -448,7 +515,7 @@ def forward_pass_s2ag(in_mfcc, in_chroma, label_in, pre_seq, target_poses, s2ag_
 
 
 # In[7]:
-def per_train_epoch(train_dataloader, s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, tf_ratio, start_time, device='cuda'):
+def per_train_epoch(train_dataloader, s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, fk_routine, tf_ratio, start_time, device='cuda'):
 
     s2ag_generator.train()
     s2ag_discriminator.train()
@@ -466,7 +533,7 @@ def per_train_epoch(train_dataloader, s2ag_generator, s2ag_discriminator, s2ag_g
     progress_bar = tqdm(enumerate(train_dataloader))
     for batch_idx, (pre_pose_vecs, target_pose_vecs, train_mfccs, train_chromas, train_labels, seq_name) in progress_bar:
         loss, dis_error, gen_error = forward_pass_s2ag(train_mfccs.to(device=device),train_chromas.to(device=device),train_labels.to(device=device),pre_pose_vecs.to(device=device),
-                                                       target_pose_vecs.to(device=device), s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, tf_ratio)
+                                                       target_pose_vecs.to(device=device), s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, fk_routine, tf_ratio)
         # Compute statistics
         batch_s2ag_loss += loss
 
@@ -486,7 +553,7 @@ def per_train_epoch(train_dataloader, s2ag_generator, s2ag_discriminator, s2ag_g
 
 
 # In[8]:
-def train(train_dataloader, s2ag_generator, s2ag_discriminator, start_time, device):
+def train(train_dataloader, s2ag_generator, s2ag_discriminator, fk_routine, start_time, device):
 
     s2ag_start_epoch = 0
     s2ag_num_epochs = 500
@@ -537,7 +604,7 @@ def train(train_dataloader, s2ag_generator, s2ag_discriminator, start_time, devi
 
         # training
         print('s2ag training epoch: {:>4d}/{:d}'.format(epoch + 1, s2ag_num_epochs))
-        per_train_epoch(train_dataloader, s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, tf_ratio, start_time, device=device)
+        per_train_epoch(train_dataloader, s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, fk_routine, tf_ratio, start_time, device=device)
         print()
         
 
@@ -571,6 +638,7 @@ def main():
 
     s2ag_generator = PoseSeq2SeqGenerator(encoder_args, decoder_args, 440, 37, 440, 12, 2, 100).to(device=device)
     s2ag_discriminator = AffDiscriminator(2, 100, 16).to(device=device)
+    fk_routine = ReconstructSkeleton(device=device)
 
     in_shape = torch.rand(8, 20, 51)
 
@@ -607,7 +675,7 @@ def main():
     # s2ag_discriminator.load_state_dict(torch.load('./BN_RN_TFModif/M2AD_Disc11_ep6_10FPS'))
 
     print("Training started...")
-    train(train_dataloader, s2ag_generator, s2ag_discriminator, start_time, device=device)
+    train(train_dataloader, s2ag_generator, s2ag_discriminator, fk_routine, start_time, device=device)
 
 
 # In[10]:
