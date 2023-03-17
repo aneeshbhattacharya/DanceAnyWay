@@ -355,7 +355,7 @@ class ReconstructSkeleton():
         return joints
 
 
-def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7, eps=1e-6):
+def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7, eps=1e-8):
     loss_func = nn.SmoothL1Loss(size_average=None, reduce=None, reduction='mean', beta=5.0)
 
     out_right_femur = out[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3]
