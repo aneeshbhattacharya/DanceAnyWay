@@ -603,7 +603,7 @@ def train(train_dataloader, s2ag_generator, s2ag_discriminator, fk_routine, star
                 )
 
         # training
-        print('s2ag training epoch: {:>4d}/{:d}'.format(epoch + 1, s2ag_num_epochs))
+        print('DanceAnyWay training epoch: {:>4d}/{:d}'.format(epoch + 1, s2ag_num_epochs))
         per_train_epoch(train_dataloader, s2ag_generator, s2ag_discriminator, s2ag_gen_optimizer, s2ag_dis_optimizer, fk_routine, tf_ratio, start_time, device=device)
         print()
         
