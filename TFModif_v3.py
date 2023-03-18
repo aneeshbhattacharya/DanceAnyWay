@@ -356,6 +356,7 @@ class ReconstructSkeleton():
 
 
 def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7, eps=1e-8):
+    cosine_similarity = nn.CosineSimilarity(dim=-1)
     loss_func = nn.SmoothL1Loss(size_average=None, reduce=None, reduction='mean', beta=5.0)
 
     out_right_femur = out[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3]
@@ -367,9 +368,12 @@ def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7, eps=1e-8):
     target_right_femur_mag = torch.linalg.norm(target_right_femur, dim=-1)
     target_right_shin_mag = torch.linalg.norm(target_right_shin, dim=-1)
 
-    cosine_dist_out_rleg = 1. - torch.einsum('btj, btj -> bt', out_right_femur, out_right_shin) / (out_right_femur_mag * out_right_shin_mag + eps)
-    cosine_dist_target_rleg =\
-        1. - torch.einsum('btj, btj -> bt', target[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3], target[..., RIGHT_SHIN_BONE_IDX * 3:(RIGHT_SHIN_BONE_IDX + 1) * 3]) / (target_right_femur_mag * target_right_shin_mag + eps)
+    # cosine_dist_out_rleg = 1. - torch.einsum('btj, btj -> bt', out_right_femur, out_right_shin) / (out_right_femur_mag * out_right_shin_mag + eps)
+    # cosine_dist_target_rleg =\
+    #     1. - torch.einsum('btj, btj -> bt', target[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3], target[..., RIGHT_SHIN_BONE_IDX * 3:(RIGHT_SHIN_BONE_IDX + 1) * 3]) / (target_right_femur_mag * target_right_shin_mag + eps)
+
+    cosine_dist_out_rleg = 1. - cosine_similarity(out_right_femur, out_right_shin)
+    cosine_dist_target_rleg = 1. - cosine_similarity(target_right_femur, target_right_femur)
     cosine_dist_loss_rleg = dist_coeff * loss_func(cosine_dist_out_rleg, cosine_dist_target_rleg)
     cosine_vel_loss_rleg = vel_coeff * loss_func(cosine_dist_out_rleg[:, 1:] - cosine_dist_out_rleg[:, :-1],
                                                  cosine_dist_target_rleg[:, 1:] - cosine_dist_target_rleg[:, :-1])
@@ -383,9 +387,11 @@ def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7, eps=1e-8):
     target_left_femur_mag = torch.linalg.norm(target_left_femur, dim=-1)
     target_left_shin_mag = torch.linalg.norm(target_left_shin, dim=-1)
 
-    cosine_dist_out_lleg = 1. - torch.einsum('btj, btj -> bt', out_left_femur, out_left_shin) / (out_left_femur_mag * out_left_shin_mag + eps)
-    cosine_dist_target_lleg =\
-        1. - torch.einsum('btj, btj -> bt', target[..., LEFT_FEMUR_BONE_IDX * 3:(LEFT_FEMUR_BONE_IDX + 1) * 3], target[..., LEFT_SHIN_BONE_IDX * 3:(LEFT_SHIN_BONE_IDX + 1) * 3]) / (target_left_femur_mag * target_left_shin_mag + eps)
+    # cosine_dist_out_lleg = 1. - torch.einsum('btj, btj -> bt', out_left_femur, out_left_shin) / (out_left_femur_mag * out_left_shin_mag + eps)
+    # cosine_dist_target_lleg =\
+    #     1. - torch.einsum('btj, btj -> bt', target[..., LEFT_FEMUR_BONE_IDX * 3:(LEFT_FEMUR_BONE_IDX + 1) * 3], target[..., LEFT_SHIN_BONE_IDX * 3:(LEFT_SHIN_BONE_IDX + 1) * 3]) / (target_left_femur_mag * target_left_shin_mag + eps)
+    cosine_dist_out_lleg = 1. - cosine_similarity(out_left_femur, out_left_shin)
+    cosine_dist_target_lleg = 1. - cosine_similarity(target_left_femur, target_left_femur)
     cosine_dist_loss_lleg = dist_coeff * loss_func(cosine_dist_out_lleg, cosine_dist_target_lleg)
     cosine_vel_loss_lleg = vel_coeff * loss_func(cosine_dist_out_lleg[:, 1:] - cosine_dist_out_lleg[:, :-1],
                                                  cosine_dist_target_lleg[:, 1:] - cosine_dist_target_lleg[:, :-1])
