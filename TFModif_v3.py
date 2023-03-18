@@ -371,7 +371,6 @@ def get_leg_loss(out, target, dist_coeff=0.3, vel_coeff=0.7, eps=1e-8):
     # cosine_dist_out_rleg = 1. - torch.einsum('btj, btj -> bt', out_right_femur, out_right_shin) / (out_right_femur_mag * out_right_shin_mag + eps)
     # cosine_dist_target_rleg =\
     #     1. - torch.einsum('btj, btj -> bt', target[..., RIGHT_FEMUR_BONE_IDX * 3:(RIGHT_FEMUR_BONE_IDX + 1) * 3], target[..., RIGHT_SHIN_BONE_IDX * 3:(RIGHT_SHIN_BONE_IDX + 1) * 3]) / (target_right_femur_mag * target_right_shin_mag + eps)
-
     cosine_dist_out_rleg = 1. - cosine_similarity(out_right_femur, out_right_shin)
     cosine_dist_target_rleg = 1. - cosine_similarity(target_right_femur, target_right_femur)
     cosine_dist_loss_rleg = dist_coeff * loss_func(cosine_dist_out_rleg, cosine_dist_target_rleg)
