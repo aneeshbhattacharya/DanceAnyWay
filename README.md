@@ -1,7 +1,7 @@
 # DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning
 
-This is the readme to use the official code for the paper [DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning]. 
-Code is coming soon!
+This is the readme to use the official code for our [AAAI 2024](https://aaai.org/aaai-conference/) paper "DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning". 
+Code and models coming soon!
 
 <!-- Please use the following citation if you find our work useful: -->
 <!-- ```
