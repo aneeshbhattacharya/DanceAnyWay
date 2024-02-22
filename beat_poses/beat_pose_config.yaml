@@ -1,0 +1,17 @@
+batch_size: 8
+chroma_length: 308
+dataset:
+  test: dataset/AIST_test_data_with_root_expanded.pkl
+  train: dataset/AIST_train_data_with_root_expanded.pkl
+device: cuda
+duration: 7
+frame_loss_weight: 20
+learning_rate: 0.0001
+loss_save_path: train_results/beat_pose_losses.txt
+mfcc_length: 308
+noise_dim: 30
+num_chroma: 12
+num_epochs: 500
+num_mfcc: 37
+save_dir: train_results
+time_steps: 20

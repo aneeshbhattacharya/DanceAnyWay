@@ -1,1 +1,4 @@
 data_preprocessing/Data
+beat_poses/__pycache__
+beat_poses/train_results/checkpoint.pt
+beat_poses/utils/pre_seqs.pkl
