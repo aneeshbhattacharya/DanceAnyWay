@@ -1,7 +1,71 @@
 # DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning
 
-This is the readme to use the official code for our [AAAI 2024](https://aaai.org/aaai-conference/) paper "DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning". 
+This is the readme to use the official code for our [AAAI 2024](https://aaai.org/aaai-conference/) paper "DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning". You can find the paper [here](Arxiv link to paper)
 Code and models coming soon!
+
+
+## Installation
+Our scripts have been tested on Ubuntu 18.04 LTS with
+- Python 3.10
+- Cuda 12.1
+
+1. Clone this repository.
+
+2. [Optional but recommended] Create a conda envrionment for the project and activate it.
+
+```
+conda create daw-env python=3.10
+conda activate daw-env
+```
+
+4. Install PyTorch following the [official instructions](https://pytorch.org/).
+
+5. Install all other package requirements.
+
+```
+pip install -r requirements.txt
+```
+Note: You might need to manually uninstall and reinstall `numpy` for `torch` to work. You might need to manually uninstall and reinstall `matplotlib` and `kiwisolver` for them to work.
+
+
+## Downloading the dataset
+1. Download AIST++ dataset [here](https://google.github.io/aistplusplus_dataset/download.html) and store it in data_preprocessing/Data
+
+2. Run the following command in the data_preprocessing directory:
+```
+python process_aist_plusplus_final.py
+```
+Note: This data extraction may take a few hours depending on the configuration of the device.
+
+3. Download the presequences file [here](Google drive link)
+
+
+## Pre-trained models
+We provide a the pretrained models [here](Google drive link)
+Save these models inside their respective train_results directories as <em>checkpoint.pt<em>
+
+
+## Running the code
+1. In order to train the models, run the following command in each of the respective directories
+```
+python train.py
+```
+Note: In order to change the parameters of the model or training, please modify the config file provided for each model
+
+2. In order to test the models on the test dataset, run the following command in each of the respective directories
+```
+python test.py
+```
+Note: Results will be generated in a new directory named <em>test_results<em> by default. This behavior may be changed as a command line argument
+
+3. In order to evaluate the model on in-the-wild music, run the following command in the <em>dance_generator<em> directory
+```
+python evaluate.py --music_file music.wav
+```
+Note: By default, the model will generate a dance for the first 7 seconds. For infinite generation, please run the following command:
+```
+python evaluate.py --music_file music.wav --infinite_gen True
+```
 
 <!-- Please use the following citation if you find our work useful: -->
 <!-- ```
@@ -14,59 +78,4 @@ address = {New York, NY, USA},
 booktitle = {Proceedings of the 29th ACM International Conference on Multimedia},
 series = {MM '21}
 }
-```
-
-## Installation
-Our scripts have been tested on Ubuntu 18.04 LTS with
-- Python 3.7
-- Cuda 10.2
-- cudNN 7.6.5
-- PyTorch 1.5
-
-1. Clone this repository.
-
-We use $BASE to refer to the base directory for this project (the directory containing `main_v2.py`). Change present working directory to $BASE.
-
-2. [Optional but recommended] Create a conda envrionment for the project and activate it.
-
-```
-conda create s2ag-env python=3.7
-conda activate s2ag-env
-```
-
-3. Install `espeak`.
-
-```
-sudo apt-get update && sudo apt-get install espeak
-```
-
-4. Install PyTorch following the [official instructions](https://pytorch.org/).
-
-5. Install all other package requirements.
-
-```
-pip install -r requirements.txt
-```
-Note: You might need to manually uninstall and reinstall `numpy` for `torch` to work. You might need to manually uninstall and reinstall `matplotlib` and `kiwisolver` for them to work.
-
-## Downloading the datasets
-1. The Ted Gestures dataset is available for download [here](https://kaistackr-my.sharepoint.com/:u:/g/personal/zeroyy_kaist_ac_kr/EYAPLf8Hvn9Oq9GMljHDTK4BRab7rl9hAOcnjkriqL8qSg), originally hosted at [https://github.com/ai4r/Gesture-Generation-from-Trimodal-Context](https://github.com/ai4r/Gesture-Generation-from-Trimodal-Context).
-
-2. The Trinity Gesture dataset is available for download on submitting an access request [here](https://trinityspeechgesture.scss.tcd.ie/).
-
-## Running the code
-Run the `main_v2.py` file with the appropriate command line arguments.
-```
-python main_v2.py <args list>
-```
-
-The full list of arguments is available inside `main_v2.py`.
-
-For any argument not specificed in the command line, the code uses the default value for that argument.
-
-On running `main_v2.py`, the code will train the network and generate sample gestures post-training.
-
-## Pre-trained models
-We also provide a [pretrained model for download](https://drive.google.com/file/d/1os20nWp5fLTn2tLLG4Ekc9OnsJlnFjug/view?usp=sharing). If using this model, save it inside the directory `$BASE/models/ted_db` (create the directory if it does not exist). Set the command-line argument `--train-s2ag` to `False` to skip training and use this model directly for evaluation. The generated samples are stored in the automatically created `render` directory.
-
-Additionally, we provide the [pre-trained weights of the embedding network](https://drive.google.com/file/d/17Fmk7lzyWhALXdmGW7hLNejEAFab8Tfr/view?usp=sharing) required to estimate the Fréchet Gesture Distance between the ground-truth and the synthesized gestures. If using these weights, store them in the directory `$BASE/outputs`. -->
+```-->
