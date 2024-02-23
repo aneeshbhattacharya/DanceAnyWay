@@ -4,9 +4,9 @@ This is the readme to use the official code for our [AAAI 2024](https://aaai.org
 
 
 ## Pre-Requisites
-Our scripts have been tested on Ubuntu 18.04 LTS with
-- Python 3.10
-- Cuda 12.1
+Our scripts have been tested on Ubuntu 20.04 LTS with
+- Python 3.7
+- Cuda 11.6
 
 ## Installation
 1. Clone this repository.
