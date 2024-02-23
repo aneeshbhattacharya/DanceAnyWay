@@ -55,7 +55,7 @@ Note: In order to change the parameters of the model or training, please modify 
 ```
 python test.py
 ```
-Note: Results will be generated in a new directory named *test_results* by default. This behavior may be changed as a command line argument.
+Note: Results will be generated in a new directory named `test_results` by default. This behavior may be changed as a command line argument.
 
 3. In order to evaluate the model on in-the-wild music, run the following command in the `dance_generator` directory:
 ```
