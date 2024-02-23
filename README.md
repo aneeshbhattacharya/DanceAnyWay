@@ -42,7 +42,7 @@ Note: This data extraction may take a few hours depending on the configuration o
 
 ## Pre-trained models
 We provide a the pretrained models [here](Google drive link)
-Save these models inside their respective train_results directories as <em>checkpoint.pt<em>
+Save these models inside their respective train_results directories as *checkpoint.pt*
 
 
 ## Running the code
@@ -56,9 +56,9 @@ Note: In order to change the parameters of the model or training, please modify 
 ```
 python test.py
 ```
-Note: Results will be generated in a new directory named <em>test_results<em> by default. This behavior may be changed as a command line argument
+Note: Results will be generated in a new directory named *test_results* by default. This behavior may be changed as a command line argument
 
-3. In order to evaluate the model on in-the-wild music, run the following command in the <em>dance_generator<em> directory
+3. In order to evaluate the model on in-the-wild music, run the following command in the *dance_generator* directory
 ```
 python evaluate.py --music_file music.wav
 ```
