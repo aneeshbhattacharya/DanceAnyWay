@@ -14,7 +14,7 @@ Our scripts have been tested on Ubuntu 20.04 LTS with
 2. [Optional but recommended] Create a conda environment for the project and activate it:
 
 ```
-conda create daw-env python=3.10
+conda create daw-env python=3.7
 conda activate daw-env
 ```
 
