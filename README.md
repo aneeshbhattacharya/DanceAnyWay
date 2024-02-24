@@ -2,6 +2,8 @@
 
 This is the readme to use the official code for our [AAAI 2024](https://aaai.org/aaai-conference/) paper "DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning". You can find the paper draft [here](https://arxiv.org/abs/2303.03870). Camera-ready version coming soon!
 
+https://www.youtube.com/watch?v=SRMI2HzIuLs
+
 ## Pre-Requisites
 Our scripts have been tested on Ubuntu 20.04 LTS with
 - Python 3.7
