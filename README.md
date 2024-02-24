@@ -4,8 +4,6 @@ This is the readme to use the official code for our [AAAI 2024](https://aaai.org
 
 # [![](https://markdown-videos-api.jorgenkh.no/youtube/SRMI2HzIuLs)](https://youtu.be/SRMI2HzIuLs)  
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/SRMI2HzIuLs?si=ojvITfalMpouM1F3" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
 ## Pre-Requisites
 Our scripts have been tested on Ubuntu 20.04 LTS with
 - Python 3.7
