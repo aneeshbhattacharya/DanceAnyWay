@@ -2,6 +2,8 @@
 
 This is the readme to use the official code for our [AAAI 2024](https://aaai.org/aaai-conference/) paper "DanceAnyWay: Synthesizing Beat-Guided 3D Dances With Randomized Temporal Contrastive Learning". You can find the paper draft [here](https://arxiv.org/abs/2303.03870). Camera-ready version coming soon!
 
+RPS code is being released soon!
+
 # [![](https://markdown-videos-api.jorgenkh.no/youtube/SRMI2HzIuLs)](https://youtu.be/SRMI2HzIuLs)  
 
 ## Pre-Requisites
